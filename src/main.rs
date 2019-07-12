@@ -5,9 +5,8 @@ const CHIP8_RAM: usize = 4096;
 const CHIP8_WIDTH: usize = 64;
 const CHIP8_HEIGHT: usize = 32;
 
-
-pub struct Chip8Machine {
-    pub ram: [u8; CHIP8_RAM],
+pub struct VM {
+    ram: [u8; CHIP8_RAM],
     vram: [[u8; CHIP8_WIDTH]; CHIP8_HEIGHT],  // graphics memory
     vram_changed: bool,
     stack: [usize; 16],
@@ -22,10 +21,9 @@ pub struct Chip8Machine {
     keypad_register: usize, // ?
 }
 
-
-impl Chip8Machine {
+impl VM {
     pub fn new() -> Self {
-        let mut ram = [0; CHIP8_RAM];
+        let ram = [0; CHIP8_RAM];
 
         Self {
             vram: [[0; CHIP8_WIDTH]; CHIP8_HEIGHT],
@@ -55,7 +53,6 @@ impl Chip8Machine {
     }
 }
 
-
 fn load_rom(path: &str, buf: &mut [u8; 4096]) -> usize {
     let mut f = File::open(path).expect("file not found");
     match f.read(buf) {
@@ -64,10 +61,9 @@ fn load_rom(path: &str, buf: &mut [u8; 4096]) -> usize {
     }
 }
 
-
 fn main() {
     let mut buf = [0u8; 4096];
     load_rom("games/Airplane.ch8", &mut buf);
-    let mut machine = Chip8Machine::new();
-    machine.load(&buf);
+    let mut vm = VM::new();
+    vm.load(&buf);
 }
