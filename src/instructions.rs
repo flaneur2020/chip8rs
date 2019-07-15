@@ -47,7 +47,7 @@ pub enum Instruction {
     // Bnnn - JP V0, addr: Jumps to `V0 + Addr`
     LongJump(Addr),
     // Cxkk - RND Vx, byte: Sets `Vx` to a random byte ANDed with `Byte`
-    Rand(Register, Byte),
+    Rand(Register, u8),
     // Dxyn - DRW Vx, Vy, nibble: Draws the sprite with `Nibble` bytes of data from the `I` register at position `(Vx, Vy)`. Sets `VF` to `1` if any pixels are set to unlit state, `0` otherwise. Note that sprites wrap around onto the opposite side of the screen.
     Draw(Register, Register, u8),
     // Ex9E - SKP Vx: Skips the next instruction if key `Vx` is pressed
@@ -77,6 +77,7 @@ pub enum Instruction {
 }
 
 impl Instruction {
-    pub fn decode(code u32) -> Instruction {
+    pub fn decode(code: u32) -> Instruction {
+        return Instruction::Unknown;
     }
 }
