@@ -1,6 +1,10 @@
+use super::instruction;
+
+
 const CHIP8_RAM: usize = 4096;
 const CHIP8_WIDTH: usize = 64;
 const CHIP8_HEIGHT: usize = 32;
+
 
 pub struct VM {
     ram: [u8; CHIP8_RAM],
@@ -37,6 +41,11 @@ impl VM {
             delay_timer: 0,
             sound_timer: 0,
         }
+    }
+
+    pub fn run() {
+        let opcode = 128;
+        instruction::Instruction::decode(opcode);
     }
 
     pub fn load(&mut self, data: &[u8]) {
