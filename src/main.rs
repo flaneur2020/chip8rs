@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 mod vm;
-mod instructions;
+mod instruction;
 
 fn load_rom(path: &str, buf: &mut [u8; 4096]) -> usize {
     let mut f = File::open(path).expect("file not found");

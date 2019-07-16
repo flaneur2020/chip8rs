@@ -1,6 +1,8 @@
 pub type Register = u8;
 pub type Addr = u16;
+pub type Byte = u8;
 
+#[derive(PartialEq, Eq, Debug)]
 pub enum Instruction {
     // 00E0 - CLS, clear the screen
     Clear,
@@ -13,15 +15,15 @@ pub enum Instruction {
     // 2nnn
     Call(Addr),
     // 3xkk - SE Vx, byte: Skips the next instructions if `Vx` equals `Byte`
-    SkipEqualK(Register, u8),
+    SkipEqualK(Register, Byte),
     // 4xkk - SNE Vx, byte
-    SkipNotEqualK(Register, u8),
+    SkipNotEqualK(Register, Byte),
     // 5xy0 - SE Vx, Vy: Skips the next instruction if `Vx` and `Vy` are equal
     SkipEqual(Register, Register),
     // 6xkk - LD Vx, byte: Sets `Vy` to `Byte`
-    SetK(Register, u8),
+    LoadK(Register, Byte),
     // 7xkk - LD Vx, byte: Sets `Vy` to `Byte`
-    AddK(Register, u8),
+    AddK(Register, Byte),
     // 8xy0 - LD Vx, Vy: Stores `Vy` in `Vx`
     Set(Register, Register),
     // 8xy1 - OR Vx, Vy: Performs a bitwise OR (`|`) of `Vx` and `Vy`, then stores the result in `Vx`
@@ -47,9 +49,9 @@ pub enum Instruction {
     // Bnnn - JP V0, addr: Jumps to `V0 + Addr`
     LongJump(Addr),
     // Cxkk - RND Vx, byte: Sets `Vx` to a random byte ANDed with `Byte`
-    Rand(Register, u8),
+    Rand(Register, Byte),
     // Dxyn - DRW Vx, Vy, nibble: Draws the sprite with `Nibble` bytes of data from the `I` register at position `(Vx, Vy)`. Sets `VF` to `1` if any pixels are set to unlit state, `0` otherwise. Note that sprites wrap around onto the opposite side of the screen.
-    Draw(Register, Register, u8),
+    Draw(Register, Register, Byte),
     // Ex9E - SKP Vx: Skips the next instruction if key `Vx` is pressed
     SkipPressed(Register),
     // ExA1 - SKNP Vx: Skips the next instruction if key `Vx` is not pressed
@@ -59,7 +61,7 @@ pub enum Instruction {
     // Fx0A - LD Vx, K: Stops execution until a key is pressed, then stores that key in `Vx`
     WaitKey(Register),
     // Fx15 - LD DT, Vx: Sets the `delay timer` to `Vx`
-    SetTiemr(Register),
+    SetTimer(Register),
     // Fx18 - LD ST, Vx: Sets the `sound timer` to `Vx`
     SetSoundTimer(Register),
     // Fx1E - ADD I, Vx: Adds `Vx` and the `I` register, then stores the result in `I`
@@ -77,7 +79,60 @@ pub enum Instruction {
 }
 
 impl Instruction {
-    pub fn decode(code: u32) -> Instruction {
-        return Instruction::Unknown;
+    pub fn decode(opcode: u16) -> Instruction {
+        let nibbles = (
+            (opcode & 0xF000) >> 12 as u8,
+            (opcode & 0x0F00) >> 8 as u8,
+            (opcode & 0x00F0) >> 4 as u8,
+            (opcode & 0x000F) as u8,
+        );
+
+        let nnn = (opcode & 0x0FFF) as usize;
+        let kk = (opcode & 0x00FF) as Byte;
+        let x = nibbles.1 as Register;
+        let y = nibbles.2 as Register;
+        let n = nibbles.3 as Byte;
+
+        match nibbles {
+            (0x00, 0x00, 0x0e, 0x00) => Instruction::Clear,
+            (0x00, 0x00, 0x0e, 0x0e) => Instruction::Return,
+            (0x01, _, _, _) => Instruction::Jump(nnn as Addr),
+            (0x02, _, _, _) => Instruction::Call(nnn as Addr),
+            (0x03, _, _, _) => Instruction::SkipEqualK(x, kk),
+            (0x04, _, _, _) => Instruction::SkipNotEqualK(x, kk),
+            (0x05, _, _, 0x00) => Instruction::SkipEqual(x, y),
+            (0x06, _, _, _) => Instruction::LoadK(x, kk),
+            (0x07, _, _, _) => Instruction::AddK(x, kk),
+            (0x08, _, _, 0x00) => Instruction::Set(x, y),
+            (0x08, _, _, 0x01) => Instruction::Or(x, y),
+            (0x08, _, _, 0x02) => Instruction::And(x, y),
+            (0x08, _, _, 0x03) => Instruction::Xor(x, y),
+            (0x08, _, _, 0x04) => Instruction::Add(x, y),
+            (0x08, _, _, 0x05) => Instruction::Sub(x, y),
+            (0x08, _, _, 0x06) => Instruction::ShiftRight(x, y),
+            (0x08, _, _, 0x07) => Instruction::SubInv(x, y),
+            (0x08, _, _, 0x0e) => Instruction::ShiftLeft(x, y),
+            (0x09, _, _, 0x00) => Instruction::SkipNotEqual(x, y),
+            (0x0a, _, _, _) => Instruction::LoadI(nnn as Addr),
+            (0x0b, _, _, _) => Instruction::LongJump(nnn as Addr),
+            (0x0c, _, _, _) => Instruction::Rand(x, kk),
+            (0x0d, _, _, _) => Instruction::Draw(x, y, n),
+            (0x0e, _, 0x09, 0x0e) => Instruction::SkipPressed(x),
+            (0x0e, _, 0x0a, 0x01) => Instruction::SkipNotPressed(x),
+            (0x0f, _, 0x00, 0x07) => Instruction::GetTimer(x),
+            (0x0f, _, 0x00, 0x0A) => Instruction::WaitKey(x),
+            (0x0f, _, 0x01, 0x05) => Instruction::SetTimer(x),
+            (0x0f, _, 0x01, 0x08) => Instruction::SetSoundTimer(x),
+            (0x0f, _, 0x01, 0x0e) => Instruction::AddToI(x),
+            (0x0f, _, 0x02, 0x09) => Instruction::LoadHexGlyph(x),
+            (0x0f, _, 0x03, 0x03) => Instruction::StoreBCD(x),
+            (0x0f, _, 0x05, 0x05) => Instruction::StoreRegisters(x),
+            (0x0f, _, 0x06, 0x05) => Instruction::LoadRegisters(x),
+            _ => Instruction::Unknown,
+        }
     }
 }
+
+#[cfg(test)]
+#[path = "./instruction_test.rs"]
+mod instruction_test;
