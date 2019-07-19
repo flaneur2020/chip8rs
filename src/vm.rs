@@ -1,3 +1,4 @@
+use rand;
 use super::instruction::{Instruction, Addr, Register, Byte};
 
 
@@ -82,8 +83,9 @@ impl VM {
             Instruction::SubInv(x, y) => self.op_sub_inv(x as usize, y as usize),
             Instruction::ShiftLeft(x) => self.op_shift_left(x as usize),
             Instruction::SkipNotEqual(x, y) => self.op_skip_not_equal(x as usize, y as usize),
-            Instruction::LoadI(x, y) => self.op_load_i(x as usize, y as usize),
+            Instruction::LoadI(addr) => self.op_load_i(addr),
             Instruction::Unknown => ProgramCounter::Next,
+            _ => ProgramCounter::Next,
         };
 
         match pc_change {
@@ -211,6 +213,16 @@ impl VM {
 
     fn op_load_i(&mut self, addr: Addr) -> ProgramCounter {
         self.i = addr as u16;
+        ProgramCounter::Next
+    }
+
+    fn op_long_jump(&mut self, addr: Addr) -> ProgramCounter {
+        ProgramCounter::Jump((self.v[0] as usize) + (addr as usize))
+    }
+
+    fn op_rand(&mut self, x: usize, kk: Byte) -> ProgramCounter {
+        let rn = rand::random::<u8>();
+        self.v[x] = rn & kk;
         ProgramCounter::Next
     }
 }
