@@ -2,6 +2,7 @@ pub type Register = u8;
 pub type Addr = u16;
 pub type Byte = u8;
 
+#[allow(dead_code)]
 #[derive(PartialEq, Eq, Debug)]
 pub enum Instruction {
     // 00E0 - CLS, clear the screen
@@ -37,11 +38,11 @@ pub enum Instruction {
     // 8xy5 - SUB Vx, Vy: Subtracts `Vy` from `Vx`, then stores the result in `Vx`, `VF` is set to `1` if `Vx` is larger than `Vy` prior subtraction, `0` otherwise.
     Sub(Register, Register),
     // 8xy6 - SHR Vx {, Vy}: Shifts `Vy` right by one bit, then stores the result in `Vx`. Stores the least-significant bit prior shift of `Vy` in `VF`.
-    ShiftRight(Register, Register),
+    ShiftRight(Register),
     // 8xy7 - SUBN Vx, Vy: Subtracts `Vx` from `Vy`, then stores the result in `Vx`. `VF` is set to `1` if `Vx` is larger than `Vy` prior subtraction, `0` otherwise. Note that this is the same as `Sub` with inverted register operands.
     SubInv(Register, Register),
     // 8xyE - SHL Vx {, Vy}: Shifts `Vy` left by one bit, then stores the result in `Vx`. Stores the most-significant bit prior shift of `Vy` in `VF`.
-    ShiftLeft(Register, Register),
+    ShiftLeft(Register),
     // 9xy0 - SNE Vx, Vy: Skips the next instruction if `Vx` and `Vy` are not equal
     SkipNotEqual(Register, Register),
     // Annn - LD I, addr: Sets the `I` register to `Addr`
@@ -109,9 +110,9 @@ impl Instruction {
             (0x08, _, _, 0x03) => Instruction::Xor(x, y),
             (0x08, _, _, 0x04) => Instruction::Add(x, y),
             (0x08, _, _, 0x05) => Instruction::Sub(x, y),
-            (0x08, _, _, 0x06) => Instruction::ShiftRight(x, y),
+            (0x08, _, _, 0x06) => Instruction::ShiftRight(x),
             (0x08, _, _, 0x07) => Instruction::SubInv(x, y),
-            (0x08, _, _, 0x0e) => Instruction::ShiftLeft(x, y),
+            (0x08, _, _, 0x0e) => Instruction::ShiftLeft(x),
             (0x09, _, _, 0x00) => Instruction::SkipNotEqual(x, y),
             (0x0a, _, _, _) => Instruction::LoadI(nnn as Addr),
             (0x0b, _, _, _) => Instruction::LongJump(nnn as Addr),
