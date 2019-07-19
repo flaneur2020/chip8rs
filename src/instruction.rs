@@ -66,7 +66,7 @@ pub enum Instruction {
     // Fx18 - LD ST, Vx: Sets the `sound timer` to `Vx`
     SetSoundTimer(Register),
     // Fx1E - ADD I, Vx: Adds `Vx` and the `I` register, then stores the result in `I`
-    AddToI(Register),
+    AddI(Register),
     // Fx29 - LD F, Vx: Stores the address of the hexadecimal digit `Vx` in the `I` register
     LoadHexGlyph(Register),
     // Fx33 - LD B, Vx: Stores the binary-coded decimal representation of `Vx` at address `I`, `I + 1` and `I + 2`
@@ -124,7 +124,7 @@ impl Instruction {
             (0x0f, _, 0x00, 0x0A) => Instruction::WaitKey(x),
             (0x0f, _, 0x01, 0x05) => Instruction::SetTimer(x),
             (0x0f, _, 0x01, 0x08) => Instruction::SetSoundTimer(x),
-            (0x0f, _, 0x01, 0x0e) => Instruction::AddToI(x),
+            (0x0f, _, 0x01, 0x0e) => Instruction::AddI(x),
             (0x0f, _, 0x02, 0x09) => Instruction::LoadHexGlyph(x),
             (0x0f, _, 0x03, 0x03) => Instruction::StoreBCD(x),
             (0x0f, _, 0x05, 0x05) => Instruction::StoreRegisters(x),

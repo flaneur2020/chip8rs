@@ -37,7 +37,7 @@ pub struct VM {
     delay_timer: u8,
     sound_timer: u8,
     keypad: [bool; 16],
-    keypad_waiting: usize, // ?
+    keypad_waiting: bool, // ?
     keypad_register: usize, // ?
 }
 
@@ -55,7 +55,7 @@ impl VM {
             pc: 0x200,
             sp: 0,
             keypad: [false; 16],
-            keypad_waiting: 0,
+            keypad_waiting: false,
             keypad_register: 0,
             delay_timer: 0,
             sound_timer: 0,
@@ -65,6 +65,7 @@ impl VM {
     pub fn run_opcode(&mut self, opcode: u16) {
         let pc_change = match Instruction::decode(opcode) {
             Instruction::Clear => self.op_clear(),
+            Instruction::Sys(_) => ProgramCounter::Next,
             Instruction::Return => self.op_return(),
             Instruction::Jump(addr) => self.op_jump(addr),
             Instruction::Call(addr) => self.op_call(addr),
@@ -84,8 +85,21 @@ impl VM {
             Instruction::ShiftLeft(x) => self.op_shift_left(x as usize),
             Instruction::SkipNotEqual(x, y) => self.op_skip_not_equal(x as usize, y as usize),
             Instruction::LoadI(addr) => self.op_load_i(addr),
+            Instruction::LongJump(addr) => self.op_long_jump(addr),
+            Instruction::Rand(x, k) => self.op_rand(x as usize, k),
+            Instruction::Draw(x, y, k) => self.op_draw(x as usize, y as usize, k as usize),
+            Instruction::SkipPressed(x) => self.op_skip_pressed(x as usize),
+            Instruction::SkipNotPressed(x) => self.op_skip_not_pressed(x as usize),
+            Instruction::GetTimer(x) => self.op_get_timer(x as usize),
+            Instruction::WaitKey(x) => self.op_wait_key(x as usize),
+            Instruction::SetTimer(x) => self.op_set_timer(x as usize),
+            Instruction::SetSoundTimer(x) => self.op_set_sound_timer(x as usize),
+            Instruction::AddI(x) => self.op_add_i(x as usize),
+            Instruction::LoadHexGlyph(x) => self.op_load_hex_glyph(x as usize),
+            Instruction::StoreBCD(x) => self.op_store_bcd(x as usize),
+            Instruction::StoreRegisters(x) => self.op_store_registers(x as usize),
+            Instruction::LoadRegisters(x) => self.op_load_registers(x as usize),
             Instruction::Unknown => ProgramCounter::Next,
-            _ => ProgramCounter::Next,
         };
 
         match pc_change {
@@ -223,6 +237,84 @@ impl VM {
     fn op_rand(&mut self, x: usize, kk: Byte) -> ProgramCounter {
         let rn = rand::random::<u8>();
         self.v[x] = rn & kk;
+        ProgramCounter::Next
+    }
+
+    fn op_draw(&mut self, x: usize, y: usize, n: usize) -> ProgramCounter {
+        self.v[0x0f] = 0;
+        for byte in 0..n {
+            let sy = (self.v[y] as usize + byte) % CHIP8_HEIGHT;
+            for bit in 0..8 {
+                let sx = (self.v[x] as usize + bit) % CHIP8_WIDTH;
+                let color = (self.ram[self.i as usize + byte as usize] >> (7 - bit)) & 1;
+                self.v[0xf] |= color & self.vram[sy][sx];
+                self.vram[sy][sx] ^= color;
+            }
+        }
+        self.vram_changed = true;
+        ProgramCounter::Next
+    }
+
+    fn op_skip_pressed(&mut self, x: usize) -> ProgramCounter {
+        ProgramCounter::skip_if(self.keypad[self.v[x] as usize])
+    }
+
+    fn op_skip_not_pressed(&mut self, x: usize) -> ProgramCounter {
+        ProgramCounter::skip_if(! self.keypad[self.v[x] as usize])
+    }
+
+    fn op_get_timer(&mut self, x: usize) -> ProgramCounter {
+        self.v[x] = self.delay_timer;
+        ProgramCounter::Next
+    }
+
+    fn op_wait_key(&mut self, x: usize) -> ProgramCounter {
+        self.keypad_waiting = true;
+        self.keypad_register = x;
+        ProgramCounter::Next
+    }
+
+    fn op_set_timer(&mut self, x: usize) -> ProgramCounter {
+        self.delay_timer = self.v[x];
+        ProgramCounter::Next
+    }
+
+    fn op_set_sound_timer(&mut self, x: usize) -> ProgramCounter {
+        self.sound_timer = self.v[x];
+        ProgramCounter::Next
+    }
+
+    fn op_add_i(&mut self, x: usize) -> ProgramCounter {
+        let n: usize = self.i as usize + self.v[x] as usize;
+        self.i = n as u16;
+        self.v[0xf] = if n > 0x0F00 { 1 } else { 0 };
+        ProgramCounter::Next
+    }
+
+    fn op_load_hex_glyph(&mut self, x: usize) -> ProgramCounter {
+        self.i = (self.v[x] as u16) * 5;
+        ProgramCounter::Next
+   }
+
+    fn op_store_bcd(&mut self, x: usize) -> ProgramCounter {
+        let i: usize = self.i as usize;
+        self.ram[i] = self.v[x] / 100;
+        self.ram[i + 1] = (self.v[x] % 100) / 10;
+        self.ram[i + 2] = self.v[x] % 10;
+        ProgramCounter::Next
+    }
+
+    fn op_store_registers(&mut self, x: usize) -> ProgramCounter {
+        for i in 0..x+1 {
+            self.ram[self.i as usize + i] = self.v[i];
+        }
+        ProgramCounter::Next
+    }
+
+    fn op_load_registers(&mut self, x: usize) -> ProgramCounter {
+        for i in 0..x+1 {
+            self.v[i] = self.ram[self.i as usize + i];
+        }
         ProgramCounter::Next
     }
 }
