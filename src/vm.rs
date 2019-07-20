@@ -1,5 +1,6 @@
 use rand;
-use super::instruction::{Instruction, Addr, Register, Byte};
+use super::instruction::{Instruction, Addr, Byte};
+use super::font::{FONT_SET};
 
 
 const CHIP8_RAM: usize = 4096;
@@ -24,6 +25,11 @@ impl ProgramCounter {
     }
 }
 
+pub struct OutputState<'a> {
+    pub vram: &'a [[u8; CHIP8_WIDTH]; CHIP8_HEIGHT],
+    pub vram_changed: bool,
+    pub beep: bool,
+}
 
 pub struct VM {
     ram: [u8; CHIP8_RAM],
@@ -43,7 +49,10 @@ pub struct VM {
 
 impl VM {
     pub fn new() -> Self {
-        let ram = [0; CHIP8_RAM];
+        let mut ram = [0; CHIP8_RAM];
+        for i in 0..FONT_SET.len() {
+            ram[i] = FONT_SET[i];
+        }
 
         Self {
             vram: [[0; CHIP8_WIDTH]; CHIP8_HEIGHT],
@@ -59,6 +68,39 @@ impl VM {
             keypad_register: 0,
             delay_timer: 0,
             sound_timer: 0,
+        }
+    }
+
+    pub fn step(&mut self, keypad: [bool; 16]) -> OutputState {
+        self.vram_changed = false;
+
+        for i in 0..keypad.len() {
+            self.keypad[i] = keypad[i];
+        }
+
+        if self.keypad_waiting {
+            for i in 0..keypad.len() {
+                if keypad[i] {
+                    self.keypad_waiting = false;
+                    self.v[self.keypad_register] = i as u8;
+                    break;
+                }
+            }
+        } else {
+            if self.delay_timer > 0 {
+                self.delay_timer -= 1;
+            }
+            if self.sound_timer > 0 {
+                self.sound_timer -= 1;
+            }
+            let opcode = self.get_opcode();
+            self.run_opcode(opcode);
+        }
+
+        OutputState {
+            vram: &self.vram,
+            vram_changed: self.vram_changed,
+            beep: self.sound_timer > 0,
         }
     }
 

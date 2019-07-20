@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 mod vm;
+mod font;
 mod instruction;
 
 fn load_rom(path: &str, buf: &mut [u8; 4096]) -> usize {
