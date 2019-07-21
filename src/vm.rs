@@ -3,10 +3,10 @@ use super::instruction::{Instruction, Addr, Byte};
 use super::font::{FONT_SET};
 
 
-const CHIP8_RAM: usize = 4096;
-const CHIP8_WIDTH: usize = 64;
-const CHIP8_HEIGHT: usize = 32;
 const OPCODE_SIZE: usize = 2;
+const CHIP8_RAM_SIZE: usize = 4096;
+pub const CHIP8_WIDTH: usize = 64;
+pub const CHIP8_HEIGHT: usize = 32;
 
 
 enum ProgramCounter {
@@ -32,7 +32,7 @@ pub struct OutputState<'a> {
 }
 
 pub struct VM {
-    ram: [u8; CHIP8_RAM],
+    ram: [u8; CHIP8_RAM_SIZE],
     vram: [[u8; CHIP8_WIDTH]; CHIP8_HEIGHT],  // graphics memory
     vram_changed: bool,
     stack: [usize; 16],
@@ -49,7 +49,7 @@ pub struct VM {
 
 impl VM {
     pub fn new() -> Self {
-        let mut ram = [0; CHIP8_RAM];
+        let mut ram = [0; CHIP8_RAM_SIZE];
         for i in 0..FONT_SET.len() {
             ram[i] = FONT_SET[i];
         }
