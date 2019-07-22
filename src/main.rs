@@ -21,7 +21,7 @@ fn main() {
     let mut vm = chip8rs::VM::new();
     let mut ui = chip8rs::UI::new(sdl_context);
 
-    load_rom("games/Airplane.ch8", &mut buf);
+    load_rom("games/Tank.ch8", &mut buf);
     vm.load(&buf);
 
     while let Ok(keypad) = ui.poll() {
@@ -30,6 +30,6 @@ fn main() {
             ui.draw(output.vram);
         }
 
-        thread::sleep(Duration::from_millis(2));
+        thread::sleep(Duration::from_micros(200));
     }
 }
